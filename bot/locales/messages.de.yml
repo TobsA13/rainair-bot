@@ -1,0 +1,90 @@
+de:
+  whitelist:
+    Du Spast hast hier keine Rechte.
+  start: |
+    Reserving seats for Rainair. In the badass way of live.
+    
+    Type /reserve to start
+    Or /cancel if you are a pussy
+    
+    This only works with flights open for check-in — that's from 24 hours to 2.5 hours before departure!
+
+  reserve_start: |
+    What is the IATA-code of the departure airport?
+
+  invalid_origin: |
+    Code is not valid!
+
+  ask_destination: |
+    What is the IATA-code of the arrival airport?
+
+  invalid_destination: |
+    Code is not valid!
+
+  invalid_airport_code: |
+    Code des not exist!
+
+  ask_time: |
+    When is your flight leaving? (HH:MM)
+
+  invalid_time: |
+    Invalid time. HH:MM
+
+  checking_seats: |
+    Checking for open seats...
+
+  one_seat_left: |
+    Only one seat left, go for it.
+
+  pick_seat: |
+    Where would you like to seat?
+
+  no_seats_selected: |
+    You haven't selected any seats. Please choose at least one seat.
+
+  seat_selection_instructions: |
+    Your seats: %{selected_seats}
+    
+    You can select multiple seats. 
+
+  snatching_seats: |
+    We will reserve every other seat except for %{selected_seats}!
+
+  reserving_seats: |
+    Reserving seats, this can take up to two minutes.
+
+  reservation_complete: |
+    Done!
+
+  check_in: |
+    You can now check-in.
+
+  cancel: |
+    Oh your fucking chicken.
+    Start again with /reserve
+
+  flight_not_found: |
+    Flight not found.
+    
+    Can you already check in?
+    24 hours to 2.5 hours before departure.
+
+  flight_sold_out: |
+    Sold out. GG WP Looser.
+
+  script_error: |
+    We fucked up. 
+    
+    Please try again: /reserve
+
+  flight_info_changed: |
+    Flight details have changed.
+    
+    Please try again: /reserve
+
+  something_wrong: |
+    We fucked up. 
+    
+    Please try again: /reserve
+
+  done_button: "Lets goooooooooo!"
