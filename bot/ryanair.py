@@ -1,7 +1,9 @@
 import logging
+import os
 import random
 import string
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import List
 import time
 
@@ -82,7 +84,9 @@ class Ryanair:
 
     def __take_screenshot(self, step_name):
         timestamp = time.strftime("%Y%m%d-%H%M%S")
-        filename = f"screenshots/{step_name}_{timestamp}.png"
+        filename = Path(os.getcwd()) / "screenshots"
+        filename.mkdir(parents=True, exist_ok=True)
+        filename = filename / f"{step_name}_{timestamp}.png"
         self.__driver.save_screenshot(filename)
         print(f"Screenshot saved: {filename}")
 
@@ -104,11 +108,11 @@ class Ryanair:
         # Check if the time is within the next 2.5 hours
         if utc_departure_time < utc_now + timedelta(hours=2.5):
             # If the time is within 2.5 hours from now, set departure to tomorrow
-            tomorrow = utc_now + timedelta(days=1)
+            tomorrow = departure_datetime + timedelta(days=1)
             departure_date = tomorrow.strftime("%Y-%m-%d")
         else:
             # Otherwise, set departure to today
-            departure_date = utc_now.strftime("%Y-%m-%d")
+            departure_date = departure_datetime.strftime("%Y-%m-%d")
 
         logger.info("Setting departure date to %s", departure_date)
         return departure_date
@@ -380,7 +384,7 @@ class Ryanair:
                 f"Error proceeding to seat selection page: {e}", e
             ) from e
 
-    def __proceed_to_fast_track(self):
+    def __proceed_to_baggage_select(self):
         """Click on the continue button to proceed to fast track selection."""
         try:
             continue_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
@@ -474,23 +478,50 @@ class Ryanair:
                 logger.error("Error selecting seat %s: %s", seat_id, e)
                 raise RyanairScriptError(f"Error selecting seat: {e}", e) from e
 
-    def __handle_add_fast_track(self):
+    def __handle_to_fast_track(self):
         """Handle the fast track page."""
         try:
             add_fast_track_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
                 EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, ".enhanced-takeover-beta__product-confirm-cta")
+                    (By.CSS_SELECTOR, ".airport-and-flight__cta")
                 )
             )
             add_fast_track_button.click()
-            logger.info("Added fast track.")
+            logger.info("Skipped fast track.")
         except (
             TimeoutException,
             NoSuchElementException,
             ElementClickInterceptedException,
         ) as e:
-            logger.error("Error adding fast track")
-            raise RyanairScriptError(f"Error adding fast track: {e}", e) from e
+            logger.error("Error skipping fast track")
+            raise RyanairScriptError(f"Error skipping fast track: {e}", e) from e
+
+    def __handle_to_rental_car(self):
+        """Handle the fast track page."""
+        try:
+            add_fast_track_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, ".transport__cta")
+                )
+            )
+            add_fast_track_button.click()
+            logger.info("Skipped rental car.")
+        except (
+            TimeoutException,
+            NoSuchElementException,
+            ElementClickInterceptedException,
+        ) as e:
+            logger.error("Error skipping rental car")
+            raise RyanairScriptError(f"Error skipping rental car: {e}", e) from e
+
+    def __remove_login_popup(self):
+        """Remove login popup in basket. """
+        WebDriverWait(self.__driver, self.__TIMEOUT).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".contact-details"))
+        )
+        time.sleep(3)
+        self.__driver.execute_script("return document.getElementsByTagName('ry-auth-popup-container')[0].remove();")
+        logger.info("Removed login popup.")
 
     def __is_select_baggage_page(self):
         """Checks whether the loaded page is the check baggage page"""
@@ -614,8 +645,19 @@ class Ryanair:
             )
 
         self.__select_seats(seats)
-        self.__proceed_to_fast_track()
-        self.__handle_add_fast_track()
+        self.__proceed_to_baggage_select()
+
+        self.__complete_baggage_page()
+
+        # Fasttrack
+        self.__handle_to_fast_track()
+        # Rental car
+        self.__handle_to_rental_car()
+
+        self.__remove_login_popup()
+        self.__take_screenshot("finish")
+
+
 
     def __click_ryanair_logo(self):
         """Clicks the ryanair logo on the top left of the page"""

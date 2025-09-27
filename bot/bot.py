@@ -37,8 +37,8 @@ from ryanair import (
 import i18n
 
 i18n.load_path.append("locales")
-i18n.set("locale", "en")
-i18n.set("fallback", "en")
+i18n.set("locale", "de")
+i18n.set("fallback", "de")
 
 
 logging.basicConfig(
@@ -50,12 +50,22 @@ logger = logging.getLogger(__name__)
 # Telegram bot token from environment variable
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 PROXY_TOKEN = os.getenv("PROXY_API_KEY")
-SELENIUM_URL = os.getenv("SELENIUM_URL")
+WHITELIST = os.getenv("WHITELIST", "").split(",")
+
 
 proxies = Proxy(PROXY_TOKEN)
 
 # States for conversation
 ORIGIN, DESTINATION, TIME, SEATS_SELECTION, CONFIRMATION = range(5)
+
+def whitelist(func):
+    async def wrapper(*args, **kwargs):
+        if str(args[0].message.chat.id) not in WHITELIST:
+            logger.warning("User not in whitelist: %s (%s): %s", args[0].message.chat.first_name, args[0].message.chat.id, args[0].message.text)
+            await args[0].effective_chat.send_message(i18n.t("messages.whitelist"))
+            return None
+        return await func(*args, **kwargs)
+    return wrapper
 
 
 def retry_async(exceptions, max_attempts=3, initial_delay=1, backoff_factor=2):
@@ -114,6 +124,7 @@ async def open_driver_and_reserve(
         await asyncio.to_thread(ra.reserve_seats, seats_to_reserve)
     except Exception as e:
         logger.error("Error reserving seats: %s", e)
+        raise e
     # finally:
     #     await asyncio.to_thread(driver.quit)
 
@@ -168,20 +179,20 @@ def create_webdriver():
 
     return driver
 
-
+@whitelist
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send a welcome message when the command /start is issued."""
     # Refresh the proxy list to get the latest proxies
     proxies.refresh()
     await update.message.reply_text(i18n.t("messages.start"))
 
-
+@whitelist
 async def reserve_seat_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start the seat reservation conversation."""
     await update.message.reply_text(i18n.t("messages.reserve_start"))
     return ORIGIN
 
-
+@whitelist
 async def get_flight_origin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Store the origin and ask for the destination."""
     origin_input = update.message.text.strip().upper()
@@ -201,7 +212,7 @@ async def get_flight_origin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(i18n.t("messages.ask_destination"))
     return DESTINATION
 
-
+@whitelist
 async def get_flight_destination(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Store the destination and ask for the flight date."""
     destination_input = update.message.text.strip().upper()
@@ -247,7 +258,7 @@ def divide_seats_evenly(seats, max_rows=4):
 
     return seat_layout
 
-
+@whitelist
 async def get_flight_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Store the flight time and ask for the seat."""
     time_input = update.message.text.strip()
@@ -439,13 +450,17 @@ async def start_reservation(
         )
 
     # Run all the tasks concurrently
-    await asyncio.gather(*tasks)
+    try:
+        await asyncio.gather(*tasks)
+    except Exception:
+        await loading_message.edit_text(i18n.t("messages.something_wrong"))
+        return await end_conversation(context)
 
     await loading_message.edit_text(i18n.t("messages.reservation_complete"))
     await update.effective_chat.send_message(i18n.t("messages.check_in"))
     return await end_conversation(context)
 
-
+@whitelist
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancel the current conversation."""
     await update.message.reply_text(i18n.t("messages.cancel"))
