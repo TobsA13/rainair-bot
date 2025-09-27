@@ -1,9 +1,10 @@
 services:
   shamrockseats:
     build: .
-    image: piupiuson/shamrockseats:latest
-    container_name: ShamrockSeats
-    restart: always
+    image: tobsa13/rainairseats:latest
+    container_name: RainAirSeats
+    restart: unless-stopped
     environment:
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
       PROXY_API_KEY: "${PROXY_API_KEY}"
+      WHITELIST: "${WHITELIST}"
