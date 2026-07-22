@@ -225,8 +225,9 @@ class Ryanair:
                 'ry-dropdown[data-ref="pax-details__title"] button.dropdown__toggle',
             )
             dropdown_toggle.click()
+            time.sleep(1)
             mr_option = passenger_card.find_element(
-                By.CSS_SELECTOR, "ry-dropdown-item[data-ref='title-item-0']"
+                By.CSS_SELECTOR, "ry-dropdown-item[data-ref='title-item-0'] button.dropdown-item__link"
             )
             mr_option.click()
         except (NoSuchElementException, ElementClickInterceptedException) as e:
@@ -330,7 +331,7 @@ class Ryanair:
         try:
             login_later_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
                 EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, ".login-touchpoint__login-later")
+                    (By.CSS_SELECTOR, "button:has(span.login-touchpoint__login-later)")
                 )
             )
             login_later_button.click()
@@ -384,8 +385,25 @@ class Ryanair:
                 f"Error proceeding to seat selection page: {e}", e
             ) from e
 
+    def __handle_overlay_seats(self):
+        try:
+            skip_overlay_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
+                EC.element_to_be_clickable(
+                    (By.CSS_SELECTOR, "div.seats-modal__buttons button.seats-modal__cta")
+                )
+            )
+            skip_overlay_button.click()
+            logger.info("Skip seat overlay")
+        except (
+            TimeoutException,
+            NoSuchElementException,
+            ElementClickInterceptedException,
+        ) as e:
+            logger.error("Error skippingseat overlay")
+            raise RyanairScriptError(f"Error skipping seat overlay: {e}", e) from e
+
     def __proceed_to_baggage_select(self):
-        """Click on the continue button to proceed to fast track selection."""
+        """Click on the continue button to proceed to baggage selection."""
         try:
             continue_button = WebDriverWait(self.__driver, self.__TIMEOUT).until(
                 EC.element_to_be_clickable(
@@ -393,15 +411,15 @@ class Ryanair:
                 )
             )
             continue_button.click()
-            logger.info("Proceeded to the fast track selection.")
+            logger.info("Proceeded to the baggageselection.")
         except (
             TimeoutException,
             NoSuchElementException,
             ElementClickInterceptedException,
         ) as e:
-            logger.error("Error proceeding to fast track selection: %s", e)
+            logger.error("Error proceeding to baggage selection: %s", e)
             raise RyanairScriptError(
-                f"Error proceeding to fast track selection: {e}", e
+                f"Error proceeding to baggage selection: {e}", e
             ) from e
 
     def __wait_for_seatmap(self):
@@ -520,7 +538,7 @@ class Ryanair:
             EC.presence_of_element_located((By.CSS_SELECTOR, ".contact-details"))
         )
         time.sleep(3)
-        self.__driver.execute_script("return document.getElementsByTagName('ry-auth-popup-container')[0].remove();")
+        self.__driver.execute_script("return document.getElementsByTagName('ry-authentication-popup')[0].remove();")
         logger.info("Removed login popup.")
 
     def __is_select_baggage_page(self):
@@ -637,6 +655,7 @@ class Ryanair:
             self.__accept_cookies()
 
         self.__wait_for_seatmap()
+        self.__handle_overlay_seats()
         available_seats = self.__get_available_seats_from_seatmap()
 
         if not all(elem in available_seats for elem in seats):

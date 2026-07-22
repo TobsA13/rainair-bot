@@ -428,6 +428,8 @@ async def start_reservation(
     for seat in seats_to_reserve:
         seats_remaining.remove(seat)
 
+    seats_remaining.sort(reverse = True)
+
     drivers_needed = math.ceil(len(seats_remaining) / available_tickets)
     logger.info("Need to create %d chrome drivers", drivers_needed)
 
